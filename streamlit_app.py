@@ -1,111 +1,160 @@
 from collections import namedtuple
 import altair as alt
+import extra_streamlit_components as stx
+import json
 import math
-from datetime import datetime
+from datetime import datetime, timedelta
 import numpy as np
 import pandas as pd
+import requests
 import streamlit as st
 
 
 CLIENT_ID = st.secrets["CLIENT_ID"]
+CLIENT_SECRET = st.secrets["CLIENT_SECRET"]
+
+data_range = None
 
 
-def load_steps_data():
-    return pd.read_json('data_samples/steps_2022-03-01_2022-07-31.json')
+@st.cache
+def load_steps_data(user_id=None):
+    start_date = data_range[0].date()
+    end_date = data_range[1].date()
+    response_data = {'data': []}
+    if user_id:
+        url = f"https://api.spikeapi.com/metrics/steps/?user_id={user_id}&start_date={start_date}&end_date={end_date}"
+        headers = {'authorizationtoken': CLIENT_SECRET}
+        response = requests.request("GET", url, headers=headers)
+        if response.status_code < 400:
+            response_data = response.json()
+    steps_data = pd.read_json(json.dumps(response_data['data']))
+    steps_data.rename(columns={'value': 'steps'}, inplace=True)
+    return response_data, steps_data
 
 
-def load_sleep_data():
-    return pd.read_json('data_samples/sleep_2022-03-01_2022-07-31.json')
+@st.cache
+def load_sleep_data(user_id=None):
+    start_date = data_range[0].date()
+    end_date = data_range[1].date()
+    response_data = {'data': []}
+    if user_id:
+        url = f"https://api.spikeapi.com/metrics/sleep/?user_id={user_id}&start_date={start_date}&end_date={end_date}"
+        headers = {'authorizationtoken': CLIENT_SECRET}
+        response = requests.request("GET", url, headers=headers)
+        if response.status_code < 400:
+            response_data = response.json()
+    data = pd.read_json(json.dumps(response_data['data']))
+    return response_data, data
 
 
 def load_summaries_data():
     return pd.read_json('data_samples/activities_summary_2022-03-01_2022-07-31.json')
 
 
-def load_heart_data():
-    return pd.read_json('data_samples/heart_2022-03-01_2022-07-31.json')
+@st.cache
+def load_heart_data(user_id=None):
+    start_date = data_range[0].date()
+    end_date = data_range[1].date()
+    response_data = {'data': []}
+    if user_id:
+        url = f"https://api.spikeapi.com/metrics/heart/?user_id={user_id}&start_date={start_date}&end_date={end_date}"
+        headers = {'authorizationtoken': CLIENT_SECRET}
+        response = requests.request("GET", url, headers=headers)
+        if response.status_code < 400:
+            response_data = response.json()
+    data = pd.read_json(json.dumps(response_data['data']))
+    return response_data, data
 
 
-st.sidebar.markdown("""<img width="282" height="72"
-                            src="https://spikeapi.com/wp-content/uploads/2021/11/spike-logo-n.svg"
-                            class="attachment-full size-full" alt="">""",
-                    unsafe_allow_html=True
-                    )
+def sidebar():
+    global data_range
+    st.sidebar.markdown('<style>.logo-wrapper {text-align: center; margin-top: -70px;} .logo {width: 150px;}</style>',
+                        unsafe_allow_html=True)
 
-start_time = st.sidebar.slider(
-    "When do you start?",
-    value=datetime(2022, 3, 1, 0, 0),
-    min_value=datetime(2022, 3, 1, 0, 0),
-    max_value=datetime(2022, 7, 31, 0, 0),
-    format="YYYY/MM/DD")
-end_time = st.sidebar.slider(
-    "When do you end?",
-    value=datetime(2022, 7, 31, 0, 0),
-    min_value=datetime(2022, 3, 1, 0, 0),
-    max_value=datetime(2022, 7, 31, 0, 0),
-    format="YYYY/MM/DD")
+    st.sidebar.markdown("""
+                           <div class="logo-wrapper">
+                                <img src="https://spikeapi.com/wp-content/uploads/2021/11/spike-logo-n.svg"
+                                     class="logo" alt="">
+                           </div>
+                        """,
+                        unsafe_allow_html=True
+                        )
+    if "date_range" not in st.session_state:
+        st.session_state["date_range"] = (datetime.now() - timedelta(days=7), datetime.now())
+    data_range = st.sidebar.slider(
+        "Select data range",
+        key="date_range",
+        on_change=slider_changed,
+        # value=(datetime(2022, 8, 1, 0, 0), datetime(2022, 9, 1, 0, 0)),
+        min_value=datetime.now() - timedelta(days=30),
+        max_value=datetime.now(),
+        step=timedelta(days=1),
+        format="MM/DD")
 
 
-steps_data = load_steps_data()
-steps_data.rename(columns={'value': 'steps'}, inplace=True)
-steps_data = steps_data[(steps_data['date'] >= start_time) & (steps_data['date'] <= end_time)]
+def slider_changed():
+    if data_range[0] == st.session_state["date_range"][0]:
+        start = st.session_state["date_range"][1] - timedelta(days=7)
+        end = st.session_state["date_range"][1]
+    else:
+        start = st.session_state["date_range"][0]
+        end = st.session_state["date_range"][0] + timedelta(days=7)
+    st.session_state["date_range"] = (start, end)
 
-sleep_data = load_sleep_data()
-sleep_data = sleep_data[(sleep_data['date'] >= start_time) & (sleep_data['date'] <= end_time)]
-sleep_data["total_sleep_h"] = sleep_data.apply(lambda row: int(row.total_sleep / 3600), axis=1)
 
-summaries_data = load_summaries_data()
-summaries_data = summaries_data[(summaries_data['date'] >= start_time) & (summaries_data['date'] <= end_time)]
-summaries_data['cal_norm'] = summaries_data['calories_total'] / summaries_data['calories_total'].max()
-summaries_data['stress_norm'] = summaries_data['stress_duration'] / summaries_data['stress_duration'].max()
+@st.cache(allow_output_mutation=True)
+def get_manager():
+    return stx.CookieManager()
 
-heart_data = load_heart_data()
-heart_data = heart_data[(heart_data['date'] >= start_time) & (heart_data['date'] <= end_time)]
 
-df_merged = steps_data.reset_index().merge(sleep_data.reset_index(), how='left', on='date')
-df_merged['weekday'] = df_merged['date'].apply(lambda x: x.day_name())
+cookie_manager = get_manager()
+cookies = cookie_manager.get_all()
 
-df_week_sleep = df_merged.groupby(['weekday'])['total_sleep_h'].mean()\
-    .reset_index().sort_values('total_sleep_h', ascending=False)
+query_params = st.experimental_get_query_params()
+user_id = query_params.get('user_id', [None])[0]
 
-tab1, tab2, tab3 = st.tabs(["Sleep", "Activities", "Heart"])
+if user_id:
+    cookie_manager.set("user_id", user_id)
+else:
+    user_id = cookies.get("user_id")
 
-########
-with tab1:
-    base = alt.Chart(df_week_sleep).mark_bar(
-        cornerRadiusTopLeft=3,
-        cornerRadiusTopRight=3
-    ).encode(
-        x=alt.X('total_sleep_h'),
-        y=alt.Y('weekday', sort='-x')
-    )
-    st.altair_chart(base, use_container_width=True)
-############
-    interval = alt.selection_interval()
-    base = alt.Chart(df_merged).mark_point().encode(
-        x='total_sleep_h',
-        y='steps',
-        color=alt.condition(interval, 'weekday', alt.value('lightgray'))
-    ).properties(
-        selection=interval
-    )
-    st.altair_chart(base, use_container_width=True)
+sidebar()
+tab_sleep, tab_steps, tab_heart = st.tabs(["Sleep", "Steps", "Heart"])
 
-with tab2:
-    st.line_chart(steps_data, x='date', y='steps')
+if not user_id:
+    st.write("Please, connect device")
 
-with tab3:
-    st.vega_lite_chart(heart_data, {
-        'mark': {'type': 'circle', 'tooltip': True},
-        'encoding': {
-            'x': {'field': 'date', 'type': 'temporal'},
-            # 'x': {'field': 'max_hr', 'type': 'quantitative', "scale": {"domain": [80, 150]}},
-            'y': {'field': 'avg_hr', 'type': 'quantitative', "scale": {"domain": [60, 90]}},
-            'size': {'field': 'resting_hr', 'type': 'quantitative', "scale": {"domain": [40, 70]}},
-            'color': {'field': 'resting_hr', 'type': 'quantitative'},
-        },
-    }, use_container_width=True)
+with tab_sleep:
+    response_data, sleep_data = load_sleep_data(user_id)
+    if not sleep_data.empty:
+        sleep_data["total_sleep(h)"] = sleep_data.apply(lambda row: int(row.total_sleep / 3600), axis=1)
+        chart = alt.Chart(sleep_data).mark_line().encode(
+            x=alt.X('monthdate(date):T', axis=alt.Axis(title='Date'.upper())),  # , format=("%d %b")
+            y=alt.Y('total_sleep(h):Q'),
+            color=alt.Color("source:N")
+        )
+        st.altair_chart(chart, use_container_width=True)
+        st.write(response_data)
 
-    b = alt.Chart(summaries_data).mark_line(opacity=1).encode(
-        x='date', y='stress_norm')
-    st.altair_chart(b, use_container_width=True)
+with tab_steps:
+    response_data, steps_data = load_steps_data(user_id)
+    if not steps_data.empty:
+        chart = alt.Chart(steps_data).mark_line().encode(
+            x=alt.X('monthdate(date):T', axis=alt.Axis(title='Date'.upper())),
+            y=alt.Y('steps:Q'),
+            color=alt.Color("source:N")
+        )
+        st.altair_chart(chart, use_container_width=True)
+        st.write(response_data)
+
+with tab_heart:
+    response_data, heart_data = load_heart_data(user_id)
+    if not heart_data.empty:
+        chart = alt.Chart(heart_data).mark_line().encode(
+            x=alt.X('monthdate(date):T', axis=alt.Axis(title='Date'.upper())),
+            y=alt.Y('resting_hr:Q'),
+            color=alt.Color("source:N")
+        )
+        st.altair_chart(chart, use_container_width=True)
+        st.write(response_data)
+
