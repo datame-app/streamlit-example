@@ -155,7 +155,8 @@ with tab_sleep:
             color=alt.Color("source:N")
         )
         st.altair_chart(chart, use_container_width=True)
-    st.write(response_data)
+    if user_id:
+        st.write(response_data)
 
 with tab_steps:
     response_data, steps_data = load_steps_data(user_id)
@@ -166,7 +167,8 @@ with tab_steps:
             color=alt.Color("source:N")
         )
         st.altair_chart(chart, use_container_width=True)
-    st.write(response_data)
+    if user_id:
+        st.write(response_data)
 
 with tab_heart:
     response_data, heart_data = load_heart_data(user_id)
@@ -179,7 +181,8 @@ with tab_heart:
             color=alt.Color("source:N")
         )
         st.altair_chart(chart, use_container_width=True)
-    st.write(response_data)
+    if user_id:
+        st.write(response_data)
 
 with tab_glucose:
     response_data, glucose_data = load_glucose_data(user_id)
@@ -190,4 +193,5 @@ with tab_glucose:
             color=alt.Color("source_id:N")
         )
         st.altair_chart(chart, use_container_width=True)
-    st.write(response_data)
+    if user_id:
+        st.write(response_data)
