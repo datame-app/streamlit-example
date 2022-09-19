@@ -56,7 +56,7 @@ def load_heart_data(user_id=None):
     start_date = data_range[0].date()
     end_date = data_range[1].date()
     response_data = {'data': []}
-    data = None
+    data = pd.DataFrame()
     if user_id:
         url = f"https://api.spikeapi.com/metrics/heart/?user_id={user_id}&start_date={start_date}&end_date={end_date}"
         headers = {'authorizationtoken': CLIENT_SECRET}
