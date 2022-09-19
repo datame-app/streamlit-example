@@ -27,7 +27,7 @@ def load_steps_data(user_id=None):
         response = requests.request("GET", url, headers=headers)
         if response.status_code < 400:
             response_data = response.json()
-    steps_data = pd.read_json(json.dumps(response_data['data']))
+    steps_data = pd.DataFrame.from_dict(response_data['data'])
     steps_data.rename(columns={'value': 'steps'}, inplace=True)
     return response_data, steps_data
 
@@ -43,7 +43,7 @@ def load_sleep_data(user_id=None):
         response = requests.request("GET", url, headers=headers)
         if response.status_code < 400:
             response_data = response.json()
-    data = pd.read_json(json.dumps(response_data['data']))
+    data = pd.DataFrame.from_dict(response_data['data'])
     return response_data, data
 
 
@@ -62,7 +62,8 @@ def load_heart_data(user_id=None):
         response = requests.request("GET", url, headers=headers)
         if response.status_code < 400:
             response_data = response.json()
-    data = pd.read_json(json.dumps(response_data['data']))
+    data = pd.DataFrame.from_dict(response_data['data'])
+    data = data.drop(['heart_rate_samples'], axis=1)
     return response_data, data
 
 
@@ -77,7 +78,7 @@ def load_glucose_data(user_id=None):
         response = requests.request("GET", url, headers=headers)
         if response.status_code < 400:
             response_data = response.json()
-    data = pd.read_json(json.dumps(response_data['data']))
+    data = pd.DataFrame.from_dict(response_data['data'])
     return response_data, data
 
 
@@ -174,13 +175,15 @@ with tab_heart:
     response_data, heart_data = load_heart_data(user_id)
     if not heart_data.empty:
         heart_df = heart_data.dropna(subset=['resting_hr'])
-        chart = alt.Chart(heart_df).mark_line().encode(
-            x=alt.X('monthdate(date):T', axis=alt.Axis(title='Date'.upper())),
-            y=alt.Y('resting_hr:Q', scale=alt.Scale(domain=[heart_df['resting_hr'].min(),
-                                                            heart_df['resting_hr'].max()])),
-            color=alt.Color("source:N")
-        )
-        st.altair_chart(chart, use_container_width=True)
+        if not heart_df.empty:
+            st.write("empty?")
+            chart = alt.Chart(heart_df).mark_line().encode(
+                x=alt.X('monthdate(date):T', axis=alt.Axis(title='Date'.upper())),
+                y=alt.Y('resting_hr:Q', scale=alt.Scale(domain=[heart_df['resting_hr'].min(),
+                                                                heart_df['resting_hr'].max()])),
+                color=alt.Color("source:N")
+            )
+            st.altair_chart(chart, use_container_width=True)
     if user_id:
         st.write(response_data)
 
