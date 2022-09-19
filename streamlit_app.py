@@ -56,14 +56,15 @@ def load_heart_data(user_id=None):
     start_date = data_range[0].date()
     end_date = data_range[1].date()
     response_data = {'data': []}
+    data = None
     if user_id:
         url = f"https://api.spikeapi.com/metrics/heart/?user_id={user_id}&start_date={start_date}&end_date={end_date}"
         headers = {'authorizationtoken': CLIENT_SECRET}
         response = requests.request("GET", url, headers=headers)
         if response.status_code < 400:
             response_data = response.json()
-    data = pd.DataFrame.from_dict(response_data['data'])
-    data = data.drop(['heart_rate_samples'], axis=1)
+            data = pd.DataFrame.from_dict(response_data['data'])
+            data = data.drop(['heart_rate_samples'], axis=1)
     return response_data, data
 
 
