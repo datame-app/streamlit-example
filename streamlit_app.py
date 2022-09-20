@@ -134,14 +134,15 @@ cookies = cookie_manager.get_all()
 
 query_params = st.experimental_get_query_params()
 user_id = query_params.get('user_id', [None])[0]
-
+st.write("User ID:", user_id)
 if user_id:
     cookie_manager.set("user_id", user_id)
 else:
     user_id = cookies.get("user_id")
 
 sidebar()
-tab_sleep, tab_steps, tab_heart, tab_glucose = st.tabs(["Sleep", "Steps", "Heart", "Glucose"])
+tab_sleep, tab_steps, tab_heart, tab_glucose, tab_code = st.tabs(["Sleep", "Steps", "Heart", "Glucose",
+                                                                  "Code Example"])
 
 if not user_id:
     st.write("Please, connect device")
@@ -150,10 +151,32 @@ with tab_sleep:
     response_data, sleep_data = load_sleep_data(user_id)
     if not sleep_data.empty:
         sleep_df = sleep_data.copy()
-        sleep_df["total_sleep(h)"] = sleep_df.apply(lambda row: int(row.total_sleep / 3600), axis=1)
+        sleep_df["total_sleep(min)"] = sleep_df.apply(lambda row: int(row.total_sleep / 60), axis=1)
+
+        col1, col2, col3 = st.columns(3)
+        total_diff = int((sleep_df.iloc[-1]["total_sleep"] - sleep_df.iloc[-2]["total_sleep"]) / 60)
+        col1.metric("Total sleep",
+                    str(int(sleep_df.iloc[-1]["total_sleep"] / 60)) + " min",
+                    str(total_diff) + " min")
+        total_deep = int((sleep_df.iloc[-1]["deep"] - sleep_df.iloc[-2]["deep"]) / 60)
+        col2.metric("Deep sleep",
+                    str(int(sleep_df.iloc[-1]["deep"] / 60)) + " min",
+                    str(total_deep) + " min")
+        total_rem = int((sleep_df.iloc[-1]["rem"] - sleep_df.iloc[-2]["rem"]) / 60)
+        col3.metric("Rem sleep",
+                    str(int(sleep_df.iloc[-1]["rem"] / 60)) + " min",
+                    str(total_rem) + " min")
+        # deep_diff = (sleep_df.iloc[-1, "deep"] - sleep_df.iloc[-2, "deep"]) / 60
+        # col2.metric("Deep sleep", str(sleep_df.iloc[-1, "deep"] / 60) + " mins",
+        #             str(deep_diff) + " mins")
+        # rem_diff = (sleep_df.iloc[-1, "rem"] - sleep_df.iloc[-2, "rem"]) / 60
+        # col3.metric("REM sleep",  str(sleep_df.iloc[-1, "rem"] / 60) + " mins",
+        #             str(rem_diff) + " mins")
+
+
         chart = alt.Chart(sleep_df).mark_line().encode(
             x=alt.X('monthdate(date):T', axis=alt.Axis(title='Date'.upper())),  # , format=("%d %b")
-            y=alt.Y('total_sleep(h):Q'),
+            y=alt.Y('total_sleep(min):Q'),
             color=alt.Color("source:N")
         )
         st.altair_chart(chart, use_container_width=True)
@@ -177,7 +200,6 @@ with tab_heart:
     if not heart_data.empty:
         heart_df = heart_data.dropna(subset=['resting_hr'])
         if not heart_df.empty:
-            st.write("empty?")
             chart = alt.Chart(heart_df).mark_line().encode(
                 x=alt.X('monthdate(date):T', axis=alt.Axis(title='Date'.upper())),
                 y=alt.Y('resting_hr:Q', scale=alt.Scale(domain=[heart_df['resting_hr'].min(),
@@ -197,5 +219,21 @@ with tab_glucose:
             color=alt.Color("source_id:N")
         )
         st.altair_chart(chart, use_container_width=True)
+
     if user_id:
         st.write(response_data)
+
+with tab_code:
+    code = '''
+url = (
+    f"https://api.spikeapi.com/metrics/sleep/?"
+    f"user_id={user_id}&start_date={start_date}&end_date={end_date}"
+)
+headers = {'authorizationtoken': CLIENT_SECRET}
+response = requests.request("GET", url, headers=headers)
+if response.status_code < 400:
+    response_data = response.json()
+    data = pd.DataFrame.from_dict(response_data['data'])
+    '''
+
+    st.code(code, language='python')
