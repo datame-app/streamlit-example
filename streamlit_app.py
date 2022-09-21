@@ -134,7 +134,7 @@ cookies = cookie_manager.get_all()
 
 query_params = st.experimental_get_query_params()
 user_id = query_params.get('user_id', [None])[0]
-st.write("User ID:", user_id)
+# st.write("User ID:", user_id)
 if user_id:
     cookie_manager.set("user_id", user_id)
 else:
@@ -166,18 +166,28 @@ with tab_sleep:
         col3.metric("Rem sleep",
                     str(int(sleep_df.iloc[-1]["rem"] / 60)) + " min",
                     str(total_rem) + " min")
-        # deep_diff = (sleep_df.iloc[-1, "deep"] - sleep_df.iloc[-2, "deep"]) / 60
-        # col2.metric("Deep sleep", str(sleep_df.iloc[-1, "deep"] / 60) + " mins",
-        #             str(deep_diff) + " mins")
-        # rem_diff = (sleep_df.iloc[-1, "rem"] - sleep_df.iloc[-2, "rem"]) / 60
-        # col3.metric("REM sleep",  str(sleep_df.iloc[-1, "rem"] / 60) + " mins",
-        #             str(rem_diff) + " mins")
 
+        sleep_df['date_'] = pd.to_datetime(sleep_df['date'], format='%Y-%m-%d')
 
+        sleep_df['weekday'] = sleep_df['date_'].apply(lambda x: x.day_name())
+        df_week_sleep = sleep_df.groupby(['weekday'])['total_sleep(min)'].mean() \
+            .reset_index().sort_values('total_sleep(min)', ascending=False)
+        base = alt.Chart(df_week_sleep).mark_bar(
+            cornerRadiusTopLeft=3,
+            cornerRadiusTopRight=3
+        ).encode(
+            x=alt.X('total_sleep(min)'),
+            y=alt.Y('weekday', sort='-x')
+        )
+
+        st.altair_chart(base, use_container_width=True)
         chart = alt.Chart(sleep_df).mark_line().encode(
             x=alt.X('monthdate(date):T', axis=alt.Axis(title='Date'.upper())),  # , format=("%d %b")
-            y=alt.Y('total_sleep(min):Q'),
+            y=alt.Y('total_sleep(min):Q', scale=alt.Scale(domain=(sleep_df['total_sleep(min)'].min(),
+                                                                  sleep_df['total_sleep(min)'].max()))),
             color=alt.Color("source:N")
+        ).configure_legend(
+            orient='bottom'
         )
         st.altair_chart(chart, use_container_width=True)
     if user_id:
