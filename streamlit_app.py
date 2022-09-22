@@ -16,7 +16,6 @@ CLIENT_SECRET = st.secrets["CLIENT_SECRET"]
 data_range = None
 
 
-@st.cache
 def load_user_data(user_id=None):
     response_data = None
     if user_id:
