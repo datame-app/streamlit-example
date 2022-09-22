@@ -127,7 +127,9 @@ def sidebar(user_id=None):
         format="MM/DD")
 
     user_data = load_user_data(user_id)
-    providers = [x.get('provider') for x in user_data.get('integrations', [])]
+    providers = []
+    if user_data:
+        providers = [x.get('provider') for x in user_data.get('integrations', [])]
     st.sidebar.caption('Connected Devices')
     col1, col2 = st.sidebar.columns(2)
     with col1:
@@ -178,8 +180,8 @@ sidebar(user_id)
 tab_sleep, tab_steps, tab_heart, tab_glucose, tab_code = st.tabs(["Sleep", "Steps", "Heart", "Glucose",
                                                                   "Code Example"])
 
-if not user_id:
-    st.write("Please, connect device")
+# if not user_id:
+#     st.write("Please, connect device")
 
 with tab_sleep:
     response_data, sleep_data = load_sleep_data(user_id)
