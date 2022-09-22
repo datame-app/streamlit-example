@@ -17,6 +17,18 @@ data_range = None
 
 
 @st.cache
+def load_user_data(user_id=None):
+    response_data = None
+    if user_id:
+        url = f"https://api.spikeapi.com/users/{user_id}"
+        headers = {'authorizationtoken': CLIENT_SECRET}
+        response = requests.request("GET", url, headers=headers)
+        if response.status_code < 400:
+            response_data = response.json()
+    return response_data
+
+
+@st.cache
 def load_steps_data(user_id=None):
     start_date = data_range[0].date()
     end_date = data_range[1].date()
@@ -63,8 +75,9 @@ def load_heart_data(user_id=None):
         response = requests.request("GET", url, headers=headers)
         if response.status_code < 400:
             response_data = response.json()
-            data = pd.DataFrame.from_dict(response_data['data'])
-            data = data.drop(['heart_rate_samples'], axis=1)
+            if response_data.get('data'):
+                data = pd.DataFrame.from_dict(response_data['data'])
+                data = data.drop(['heart_rate_samples'], axis=1, errors='ignore')
     return response_data, data
 
 
@@ -83,7 +96,7 @@ def load_glucose_data(user_id=None):
     return response_data, data
 
 
-def sidebar():
+def sidebar(user_id=None):
     global data_range
     st.sidebar.markdown("""
     <style>
@@ -113,6 +126,22 @@ def sidebar():
         step=timedelta(days=1),
         format="MM/DD")
 
+    user_data = load_user_data(user_id)
+    providers = [x.get('provider') for x in user_data.get('integrations', [])]
+    st.sidebar.caption('Connected Devices')
+    col1, col2 = st.sidebar.columns(2)
+    with col1:
+        st.checkbox('Fitbit', disabled=True, value=is_connected('fitbit', providers))
+        st.checkbox('Google Fit', disabled=True, value=is_connected('google_fit', providers))
+        st.checkbox('Polar', disabled=True, value=is_connected('polar', providers))
+        st.checkbox('Strava', disabled=True, value=is_connected('strava', providers))
+        st.checkbox('Dexcom Sandbox', disabled=True, value=is_connected('dexcom_sandbox', providers))
+    with col2:
+        st.checkbox('Garmin', disabled=True, value=is_connected('garmin', providers))
+        st.checkbox('Oura', disabled=True, value=is_connected('oura', providers))
+        st.checkbox('Spotify', disabled=True, value=is_connected('spotify', providers))
+        st.checkbox('Dexcom', disabled=True, value=is_connected('dexcom', providers))
+
 
 def slider_changed():
     if data_range[0] == st.session_state["date_range"][0]:
@@ -129,6 +158,11 @@ def get_manager():
     return stx.CookieManager()
 
 
+def is_connected(provider, providers_list):
+    if provider in providers_list:
+        return True
+    return False
+
 cookie_manager = get_manager()
 cookies = cookie_manager.get_all()
 
@@ -140,7 +174,7 @@ if user_id:
 else:
     user_id = cookies.get("user_id")
 
-sidebar()
+sidebar(user_id)
 tab_sleep, tab_steps, tab_heart, tab_glucose, tab_code = st.tabs(["Sleep", "Steps", "Heart", "Glucose",
                                                                   "Code Example"])
 
