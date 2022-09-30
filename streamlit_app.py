@@ -179,9 +179,6 @@ sidebar(user_id)
 tab_sleep, tab_steps, tab_heart, tab_glucose, tab_code = st.tabs(["Sleep", "Steps", "Heart", "Glucose",
                                                                   "Code Example"])
 
-# if not user_id:
-#     st.write("Please, connect device")
-
 with tab_sleep:
     response_data, sleep_data = load_sleep_data(user_id)
     if not sleep_data.empty:
