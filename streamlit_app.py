@@ -94,12 +94,25 @@ def load_glucose_data(user_id=None):
     data = pd.DataFrame.from_dict(response_data['data'])
     return response_data, data
 
+@st.cache
+def load_activities_data(user_id=None):
+    start_date = data_range[0].date()
+    end_date = data_range[1].date()
+    response_data = {'data': []}
+    if user_id:
+        url = f"https://api.spikeapi.com/metrics/activities_stream/?user_id={user_id}&start_date={start_date}&end_date={end_date}"
+        headers = {'authorizationtoken': CLIENT_SECRET}
+        response = requests.request("GET", url, headers=headers)
+        if response.status_code < 400:
+            response_data = response.json()
+    data = pd.DataFrame.from_dict(response_data['data'])
+    return response_data, data
 
 def sidebar(user_id=None):
     global data_range
     st.sidebar.markdown("""
     <style>
-            .logo-wrapper {text-align: center; margin-top: -70px;} 
+            .logo-wrapper {text-align: center; margin-top: -70px;}
             .logo {width: 150px;}
             .e1fqkh3o3 {display:none;}
     </style>""",
@@ -125,23 +138,23 @@ def sidebar(user_id=None):
         step=timedelta(days=1),
         format="MM/DD")
 
-    user_data = load_user_data(user_id)
-    providers = []
-    if user_data:
-        providers = [x.get('provider') for x in user_data.get('integrations', [])]
-    st.sidebar.caption('Connected Devices')
-    col1, col2 = st.sidebar.columns(2)
-    with col1:
-        st.checkbox('Fitbit', disabled=True, value=is_connected('fitbit', providers))
-        st.checkbox('Google Fit', disabled=True, value=is_connected('google_fit', providers))
-        st.checkbox('Polar', disabled=True, value=is_connected('polar', providers))
-        st.checkbox('Strava', disabled=True, value=is_connected('strava', providers))
-        st.checkbox('Dexcom Sandbox', disabled=True, value=is_connected('dexcom_sandbox', providers))
-    with col2:
-        st.checkbox('Garmin', disabled=True, value=is_connected('garmin', providers))
-        st.checkbox('Oura', disabled=True, value=is_connected('oura', providers))
-        st.checkbox('Spotify', disabled=True, value=is_connected('spotify', providers))
-        st.checkbox('Dexcom', disabled=True, value=is_connected('dexcom', providers))
+    # user_data = load_user_data(user_id)
+    # providers = []
+    # if user_data:
+    #     providers = [x.get('provider') for x in user_data.get('integrations', [])]
+    # st.sidebar.caption('Connected Devices')
+    # col1, col2 = st.sidebar.columns(2)
+    # with col1:
+    #     st.checkbox('Fitbit', disabled=True, value=is_connected('fitbit', providers))
+    #     st.checkbox('Google Fit', disabled=True, value=is_connected('google_fit', providers))
+    #     st.checkbox('Polar', disabled=True, value=is_connected('polar', providers))
+    #     st.checkbox('Strava', disabled=True, value=is_connected('strava', providers))
+    #     st.checkbox('Dexcom Sandbox', disabled=True, value=is_connected('dexcom_sandbox', providers))
+    # with col2:
+    #     st.checkbox('Garmin', disabled=True, value=is_connected('garmin', providers))
+    #     st.checkbox('Oura', disabled=True, value=is_connected('oura', providers))
+    #     st.checkbox('Spotify', disabled=True, value=is_connected('spotify', providers))
+    #     st.checkbox('Dexcom', disabled=True, value=is_connected('dexcom', providers))
 
 
 def slider_changed():
@@ -176,8 +189,8 @@ else:
     user_id = cookies.get("user_id")
 
 sidebar(user_id)
-tab_sleep, tab_steps, tab_heart, tab_glucose, tab_code = st.tabs(["Sleep", "Steps", "Heart", "Glucose",
-                                                                  "Code Example"])
+tab_sleep, tab_steps, tab_heart, tab_glucose, tab_activities, tab_code = st.tabs(
+["Sleep", "Steps", "Heart", "Glucose", "Activities", "Code Example"])
 
 with tab_sleep:
     response_data, sleep_data = load_sleep_data(user_id)
@@ -264,6 +277,20 @@ with tab_glucose:
 
     if user_id:
         st.write(response_data)
+
+with tab_activities:
+    response_data, activities_data = load_activities_data(user_id)
+    if not activities_data.empty:
+        chart = alt.Chart(activities_data).mark_line().encode(
+            x=alt.X('time_start:T', axis=alt.Axis(title='Time'.upper(), format='%e %b, %Y')),
+            y=alt.Y('distance:Q'),
+            color=alt.Color("source:N")
+        )
+        st.altair_chart(chart, use_container_width=True)
+
+    if user_id:
+        st.write(response_data)
+
 
 with tab_code:
     code = '''
