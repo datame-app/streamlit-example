@@ -115,8 +115,7 @@ def sidebar(user_id=None):
             .logo-wrapper {text-align: center; margin-top: -70px;}
             .logo {width: 150px;}
             .e1fqkh3o3 {display:none;}
-    </style>""",
-                        unsafe_allow_html=True)
+    </style>""", unsafe_allow_html=True)
 
     st.sidebar.markdown("""
                            <div class="logo-wrapper">
