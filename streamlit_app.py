@@ -114,7 +114,7 @@ def sidebar(user_id=None):
     <style>
             .logo-wrapper {text-align: center; margin-top: -70px;}
             .logo {width: 150px;}
-            .e1fqkh3o3 {display:none;}
+            .e1fqkh3o2 > button {display:none;}
     </style>""", unsafe_allow_html=True)
 
     st.sidebar.markdown("""
