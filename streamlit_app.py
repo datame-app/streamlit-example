@@ -20,7 +20,7 @@ def load_user_data(user_id=None):
     response_data = None
     if user_id:
         url = f"https://api.spikeapi.com/users/{user_id}"
-        headers = {'authorizationtoken': CLIENT_SECRET}
+        headers = {'x-spike-auth': CLIENT_SECRET}
         response = requests.request("GET", url, headers=headers)
         if response.status_code < 400:
             response_data = response.json()
@@ -34,7 +34,7 @@ def load_steps_data(user_id=None):
     response_data = {'data': []}
     if user_id:
         url = f"https://api.spikeapi.com/metrics/steps/?user_id={user_id}&start_date={start_date}&end_date={end_date}"
-        headers = {'authorizationtoken': CLIENT_SECRET}
+        headers = {'x-spike-auth': CLIENT_SECRET}
         response = requests.request("GET", url, headers=headers)
         if response.status_code < 400:
             response_data = response.json()
@@ -50,7 +50,7 @@ def load_sleep_data(user_id=None):
     response_data = {'data': []}
     if user_id:
         url = f"https://api.spikeapi.com/metrics/sleep/?user_id={user_id}&start_date={start_date}&end_date={end_date}"
-        headers = {'authorizationtoken': CLIENT_SECRET}
+        headers = {'x-spike-auth': CLIENT_SECRET}
         response = requests.request("GET", url, headers=headers)
         if response.status_code < 400:
             response_data = response.json()
@@ -70,7 +70,7 @@ def load_heart_data(user_id=None):
     data = pd.DataFrame()
     if user_id:
         url = f"https://api.spikeapi.com/metrics/heart/?user_id={user_id}&start_date={start_date}&end_date={end_date}"
-        headers = {'authorizationtoken': CLIENT_SECRET}
+        headers = {'x-spike-auth': CLIENT_SECRET}
         response = requests.request("GET", url, headers=headers)
         if response.status_code < 400:
             response_data = response.json()
@@ -87,7 +87,7 @@ def load_glucose_data(user_id=None):
     response_data = {'data': []}
     if user_id:
         url = f"https://api.spikeapi.com/metrics/glucose/?user_id={user_id}&start_date={start_date}&end_date={end_date}"
-        headers = {'authorizationtoken': CLIENT_SECRET}
+        headers = {'x-spike-auth': CLIENT_SECRET}
         response = requests.request("GET", url, headers=headers)
         if response.status_code < 400:
             response_data = response.json()
@@ -101,7 +101,7 @@ def load_activities_data(user_id=None):
     response_data = {'data': []}
     if user_id:
         url = f"https://api.spikeapi.com/metrics/activities_stream/?user_id={user_id}&start_date={start_date}&end_date={end_date}"
-        headers = {'authorizationtoken': CLIENT_SECRET}
+        headers = {'x-spike-auth': CLIENT_SECRET}
         response = requests.request("GET", url, headers=headers)
         if response.status_code < 400:
             response_data = response.json()
@@ -293,11 +293,15 @@ with tab_activities:
 
 with tab_code:
     code = '''
+CLIENT_SECRET = 'SECRET' # App token from Developer Console
+user_id       = '123-abab1-12332' # User ID, which is returned after integration
+start_date    = '2022-11-15'
+end_date      = '2022-11-21'
 url = (
     f"https://api.spikeapi.com/metrics/sleep/?"
     f"user_id={user_id}&start_date={start_date}&end_date={end_date}"
 )
-headers = {'authorizationtoken': CLIENT_SECRET}
+headers = {'x-spike-auth': CLIENT_SECRET}
 response = requests.request("GET", url, headers=headers)
 if response.status_code < 400:
     response_data = response.json()
